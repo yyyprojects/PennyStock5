@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Interactive Guide to Penny Stocks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The SPA uses a thematic, single-page dashboard structure with a sticky top navigation for easy access to four key sections: 'What Are They?', 'Where They Trade', 'The Risks vs. The Allure', and 'Investor Protection'. This structure was chosen to guide the user logically from foundational knowledge (definitions, venues) to the core conflict (risks/rewards) and finally to practical safeguards (regulations). This progressive disclosure prevents information overload and makes a complex topic more digestible than a linear report format. -->
+    <!-- Visualization & Content Choices: 
+        1. Definitions: Report Info -> General vs. SEC definitions. Goal -> Compare. Viz -> Side-by-side text cards. Interaction -> None. Justification -> Direct comparison is clearest for contrasting two related but distinct concepts. Library -> HTML/Tailwind.
+        2. Trading Venues: Report Info -> OTC market tiers (OTCQX, OTCQB, Pink). Goal -> Organize/Compare. Viz -> Interactive hierarchical diagram. Interaction -> Click tabs to reveal details for each tier. Justification -> A visual, interactive hierarchy is more intuitive for understanding levels of regulation than a static table. Library -> HTML/Tailwind/JS.
+        3. Risks vs. Allure: Report Info -> High potential for loss vs. high potential for gain. Goal -> Compare/Contrast. Viz -> Two-column layout with an interactive bar chart. Interaction -> Buttons dynamically update the chart to show different risk/reward scenarios ('Typical' vs. 'The Dream'). Justification -> This makes the abstract concept of speculative risk tangible and memorable, highlighting the core paradox. Library -> Chart.js.
+        4. Investor Protection: Report Info -> SEC/FINRA broker-dealer obligations. Goal -> Inform/Organize. Viz -> Interactive checklist/accordion. Interaction -> Click to expand each rule for details. Justification -> A checklist format is scannable and actionable, allowing users to drill down into specific regulations without being overwhelmed. Library -> HTML/Tailwind/JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8; /* Warm off-white */
+            color: #4A4A4A; /* Dark Gray */
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #C084FC; /* Subtle Purple Accent */
+            border-bottom-color: #C084FC;
+        }
+        .section-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+        }
+        .tab-button {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .tab-button.active {
+            background-color: #A855F7; /* Purple Accent */
+            color: #FFFFFF;
+        }
+        .risk-reward-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .risk-reward-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .checklist-item {
+            transition: background-color 0.2s;
+        }
+        .checklist-item .details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+        }
+        .checklist-item.open .details {
+            max-height: 500px; /* Adjust as needed */
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        .checklist-item.open .icon {
+            transform: rotate(45deg);
+        }
+        .icon {
+            transition: transform 0.3s ease-in-out;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-purple-600">Penny Stock Guide</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#definition" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">What Are They?</a>
+                        <a href="#venues" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Where They Trade</a>
+                        <a href="#risk-reward" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Risks vs. Allure</a>
+                        <a href="#protection" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Investor Protection</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5">
+                        <option value="#definition">What Are They?</option>
+                        <option value="#venues">Where They Trade</option>
+                        <option value="#risk-reward">Risks vs. Allure</option>
+                        <option value="#protection">Investor Protection</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        
+        <section id="intro" class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-gray-800 mb-4">Demystifying Penny Stocks</h2>
+            <p class="max-w-3xl mx-auto text-lg text-gray-600">An interactive journey into the high-risk, high-reward world of penny stocks in the U.S. market. Explore what they are, where they're traded, and the critical balance between potential and peril.</p>
+        </section>
+
+        <section id="definition" class="py-12 md:py-16">
+            <div class="text-center mb-12">
+                <h3 class="text-2xl md:text-3xl font-bold text-gray-800">What Exactly Is a Penny Stock?</h3>
+                <p class="mt-3 max-w-2xl mx-auto text-md text-gray-500">The definition of a "penny stock" isn't as simple as its name suggests. It varies between common market understanding and strict legal definitions by regulators. This distinction is crucial because it determines the level of risk and oversight associated with a stock.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="section-card p-6 md:p-8">
+                    <h4 class="text-xl font-semibold text-gray-700 mb-3">General Market Definition</h4>
+                    <p class="text-gray-600 mb-4">In everyday conversation among investors, a penny stock is usually defined by its low price.</p>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start"><span class="text-purple-500 font-bold mr-3">▶</span><div><strong>Price:</strong> Typically any stock trading for less than <strong>$5.00 per share</strong>.</div></li>
+                        <li class="flex items-start"><span class="text-purple-500 font-bold mr-3">▶</span><div><strong>Company Size:</strong> Usually associated with "micro-cap" companies, which have a market capitalization under $300 million.</div></li>
+                    </ul>
+                </div>
+                <div class="section-card p-6 md:p-8 border-purple-300 border-2">
+                    <h4 class="text-xl font-semibold text-gray-700 mb-3">SEC Legal Definition</h4>
+                    <p class="text-gray-600 mb-4">The U.S. Securities and Exchange Commission (SEC) has a more complex, exclusionary rule. A stock is a penny stock if it's cheap *and* fails to meet other key standards.</p>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start"><span class="text-purple-500 font-bold mr-3">▶</span><div><strong>Price:</strong> A bid price of less than <strong>$5.00 per share</strong>.</div></li>
+                        <li class="flex items-start"><span class="text-purple-500 font-bold mr-3">▶</span><div><strong>Exclusions are Key:</strong> A stock is NOT a penny stock, regardless of price, if it's listed on a national exchange (like NASDAQ or NYSE) OR if the company meets minimum financial health standards (e.g., over $5 million in net tangible assets).</div></li>
+                    </ul>
+                    <p class="mt-4 text-sm text-purple-800 bg-purple-50 p-3 rounded-lg">This means a stock is legally a "penny stock" not just for being cheap, but for lacking the transparency and stability required by major exchanges.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="venues" class="py-12 md:py-16">
+            <div class="text-center mb-12">
+                <h3 class="text-2xl md:text-3xl font-bold text-gray-800">Where Do Penny Stocks Trade?</h3>
+                <p class="mt-3 max-w-3xl mx-auto text-md text-gray-500">Unlike major stocks, penny stocks don't trade on big exchanges like the NYSE or NASDAQ. They live on Over-the-Counter (OTC) markets, which have vastly different levels of regulation and transparency. Click on the tiers below to see how they compare.</p>
+            </div>
+            <div class="section-card p-6 md:p-8">
+                <div class="flex flex-col md:flex-row">
+                    <div class="md:w-1/3 mb-6 md:mb-0 md:pr-8">
+                        <h4 class="text-lg font-semibold mb-4">Hierarchy of Trading Venues</h4>
+                        <div id="venue-tabs" class="space-y-2">
+                            <button data-target="venue-exchange" class="tab-button w-full text-left p-3 rounded-md font-medium">Major Exchanges (e.g., NYSE, NASDAQ)</button>
+                            <button data-target="venue-otcqx" class="tab-button w-full text-left p-3 rounded-md font-medium">OTCQX Best Market</button>
+                            <button data-target="venue-otcqb" class="tab-button w-full text-left p-3 rounded-md font-medium active">OTCQB Venture Market</button>
+                            <button data-target="venue-pink" class="tab-button w-full text-left p-3 rounded-md font-medium">Pink Open Market</button>
+                        </div>
+                    </div>
+                    <div class="md:w-2/3 md:pl-8 md:border-l border-gray-200">
+                        <div id="venue-content">
+                            <!-- Content will be injected by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="risk-reward" class="py-12 md:py-16">
+            <div class="text-center mb-12">
+                <h3 class="text-2xl md:text-3xl font-bold text-gray-800">The Core Conflict: Risks vs. Allure</h3>
+                <p class="mt-3 max-w-3xl mx-auto text-md text-gray-500">The world of penny stocks is defined by a fundamental paradox: the potential for massive gains is directly tied to the extreme risk of total loss. Understanding this balance is the most critical part of evaluating these investments.</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div class="section-card p-6 md:p-8">
+                    <h4 class="text-xl font-semibold mb-4 text-red-600">The Overwhelming Risks</h4>
+                    <ul class="space-y-4">
+                        <li class="flex items-start"><span class="text-red-500 text-xl font-bold mr-3">!</span><div><strong>Total Loss of Investment:</strong> The odds of losing your entire investment are exceptionally high. These are for funds you can afford to lose completely.</div></li>
+                        <li class="flex items-start"><span class="text-red-500 text-xl font-bold mr-3">!</span><div><strong>Fraud & Manipulation:</strong> Prone to "pump and dump" schemes where scammers hype a stock to inflate its price, sell their shares, and leave others with worthless stock.</div></li>
+                        <li class="flex items-start"><span class="text-red-500 text-xl font-bold mr-3">!</span><div><strong>Low Liquidity:</strong> It can be very difficult to sell your shares. There may be no buyers when you want to exit, trapping your investment.</div></li>
+                        <li class="flex items-start"><span class="text-red-500 text-xl font-bold mr-3">!</span><div><strong>Lack of Information:</strong> Companies often have no obligation to release financial data, making it nearly impossible to do proper research.</div></li>
+                    </ul>
+                </div>
+                <div class="section-card p-6 md:p-8">
+                    <h4 class="text-xl font-semibold mb-4 text-green-600">The Tantalizing Allure</h4>
+                    <ul class="space-y-4">
+                        <li class="flex items-start"><span class="text-green-500 text-xl font-bold mr-3">$</span><div><strong>Potential for High Growth:</strong> A small increase in share price can result in a huge percentage gain. This is the "lottery ticket" appeal.</div></li>
+                        <li class="flex items-start"><span class="text-green-500 text-xl font-bold mr-3">$</span><div><strong>Low Barrier to Entry:</strong> The low share price allows investors to buy a large number of shares with very little capital.</div></li>
+                        <li class="flex items-start"><span class="text-green-500 text-xl font-bold mr-3">$</span><div><strong>Finding Undiscovered Gems:</strong> The dream is to invest early in a company that becomes the next big success story, before it's discovered by the wider market.</div></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="section-card p-6 md:p-8 mt-8">
+                 <div class="text-center mb-6">
+                    <h4 class="text-xl font-semibold text-gray-700">Visualizing the Risk & Reward</h4>
+                    <p class="text-gray-500 mt-2">Click the buttons to see how the potential outcomes of a penny stock investment compare.</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="riskRewardChart"></canvas>
+                </div>
+                <div class="flex justify-center space-x-4 mt-6">
+                    <button id="btn-typical" class="risk-reward-btn bg-red-500 text-white font-bold py-2 px-4 rounded-lg">Show Typical Scenario</button>
+                    <button id="btn-dream" class="risk-reward-btn bg-green-500 text-white font-bold py-2 px-4 rounded-lg">Show 'The Dream' Scenario</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="protection" class="py-12 md:py-16">
+            <div class="text-center mb-12">
+                <h3 class="text-2xl md:text-3xl font-bold text-gray-800">Investor Protection Rules</h3>
+                <p class="mt-3 max-w-3xl mx-auto text-md text-gray-500">Because of the high risks, the SEC and FINRA have special rules for brokers who sell penny stocks. These are designed to ensure you are aware of the dangers. Click each item to learn more.</p>
+            </div>
+            <div id="checklist" class="max-w-3xl mx-auto space-y-3">
+                <!-- Checklist items will be injected by JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-white">
+        <div class="container mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-sm">
+            <p>This application is for educational purposes only and is not financial advice. Investing in penny stocks is extremely risky and can result in the complete loss of your investment.</p>
+            <p class="mt-2 opacity-70">Content derived from the "Understanding Penny Stocks in the U.S. Market" report.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const venueData = {
+                'venue-exchange': {
+                    title: 'Major Exchanges (NYSE, NASDAQ)',
+                    level: 'Highest Regulation',
+                    color: 'text-blue-600',
+                    description: 'These are highly regulated, centralized markets. Companies must meet strict requirements for financial health, corporate governance, and public disclosure. Penny stocks do not trade here.'
+                },
+                'venue-otcqx': {
+                    title: 'OTCQX Best Market',
+                    level: 'Highest OTC Tier',
+                    color: 'text-green-600',
+                    description: 'The top tier of OTC markets. Companies must meet high financial standards, be current in their disclosures, and have audited financials. Penny stocks and shell companies are explicitly forbidden here.'
+                },
+                'venue-otcqb': {
+                    title: 'OTCQB Venture Market',
+                    level: 'Moderate OTC Tier',
+                    color: 'text-yellow-600',
+                    description: 'For early-stage and developing companies that report their financials to the SEC. They must have audited financials and a minimum bid price of $0.01. This is a common home for more transparent, yet still speculative, small companies.'
+                },
+                'venue-pink': {
+                    title: 'Pink Open Market',
+                    level: 'Lowest Regulation',
+                    color: 'text-red-600',
+                    description: 'The most speculative and least regulated market. Companies here have no minimum financial standards and may provide little to no public disclosure. This is where the riskiest penny stocks are often found.'
+                }
+            };
+
+            const venueTabsContainer = document.getElementById('venue-tabs');
+            const venueContentContainer = document.getElementById('venue-content');
+
+            function updateVenueContent(targetId) {
+                const data = venueData[targetId];
+                venueContentContainer.innerHTML = `
+                    <h5 class="text-2xl font-bold ${data.color} mb-2">${data.title}</h5>
+                    <p class="font-semibold text-gray-500 mb-4">${data.level}</p>
+                    <p class="text-gray-600 leading-relaxed">${data.description}</p>
+                `;
+                
+                venueTabsContainer.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                venueTabsContainer.querySelector(`[data-target="${targetId}"]`).classList.add('active');
+            }
+
+            venueTabsContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('tab-button')) {
+                    const targetId = e.target.getAttribute('data-target');
+                    updateVenueContent(targetId);
+                }
+            });
+
+            updateVenueContent('venue-otcqb');
+
+            const checklistData = [
+                {
+                    title: 'Risk Disclosure',
+                    details: 'Before your first trade, your broker must give you a document titled "Important Information on Penny Stocks". You must sign it and wait at least two business days before trading, giving you a "cooling off" period to consider the risks.'
+                },
+                {
+                    title: 'Suitability Determination',
+                    details: 'The broker must make a determination that penny stocks are a "suitable" investment for you based on your financial situation, investment experience, and objectives. They must get your written agreement for the specific transaction.'
+                },
+                {
+                    title: 'Quote Disclosure',
+                    details: 'Before each trade, the broker must tell you the current bid (what you can sell for) and ask (what you can buy for) prices. This helps you see the "spread," which is often very wide for penny stocks.'
+                },
+                {
+                    title: 'Compensation Disclosure',
+                    details: 'The firm must disclose how much compensation (commission, markup) it and the individual broker are making from your trade. This reveals their financial incentive to sell you the stock.'
+                },
+                {
+                    title: 'Monthly Statements',
+                    details: 'If you hold penny stocks, your broker must send you a monthly account statement showing the name of each stock, the quantity, and an estimated market value, if available.'
+                }
+            ];
+
+            const checklistContainer = document.getElementById('checklist');
+            checklistData.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'checklist-item section-card cursor-pointer';
+                div.innerHTML = `
+                    <div class="p-4 flex justify-between items-center">
+                        <h5 class="font-semibold text-gray-700">${item.title}</h5>
+                        <span class="icon text-purple-500 text-2xl font-thin">+</span>
+                    </div>
+                    <div class="details px-4 text-gray-600">
+                        <p>${item.details}</p>
+                    </div>
+                `;
+                checklistContainer.appendChild(div);
+            });
+
+            checklistContainer.addEventListener('click', function(e) {
+                const item = e.target.closest('.checklist-item');
+                if (item) {
+                    item.classList.toggle('open');
+                }
+            });
+
+            const ctx = document.getElementById('riskRewardChart').getContext('2d');
+            const riskRewardChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Your Investment'],
+                    datasets: [
+                        {
+                            label: 'Potential Loss',
+                            data: [100],
+                            backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Potential Gain',
+                            data: [20],
+                            backgroundColor: 'rgba(34, 197, 94, 0.6)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Typical Scenario: High Risk of Loss',
+                            font: { size: 16 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false,
+                             ticks: {
+                                callback: function(value) {
+                                    return value + '%'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Percentage of Initial Investment'
+                            }
+                        },
+                        y: {
+                            stacked: true
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('btn-typical').addEventListener('click', () => {
+                riskRewardChart.data.datasets[0].data = [100];
+                riskRewardChart.data.datasets[1].data = [20];
+                riskRewardChart.options.plugins.title.text = 'Typical Scenario: High Risk of Loss';
+                riskRewardChart.update();
+            });
+
+            document.getElementById('btn-dream').addEventListener('click', () => {
+                riskRewardChart.data.datasets[0].data = [100];
+                riskRewardChart.data.datasets[1].data = [1000];
+                riskRewardChart.options.plugins.title.text = "'The Dream' Scenario: Exponential Gain";
+                riskRewardChart.update();
+            });
+            
+            const mobileNav = document.getElementById('mobile-nav');
+            mobileNav.addEventListener('change', (e) => {
+                window.location.hash = e.target.value;
+            });
+
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('section[id]');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 80) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+
+        });
+    </script>
+
+</body>
+</html>
